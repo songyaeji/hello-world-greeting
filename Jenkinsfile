@@ -1,29 +1,30 @@
-node ('docker') {
-  stage ('Build & Unit test') {
-    sh 'mvn clean verify -DskipITs=true';
-    junit '**/target/surefire-reports/TEST-*.xml'
-    archive 'target/*.jar'
-  }
-  stage ('Static Code Analysis') {
-    sh 'mvn clean verify sonar:sonar -Dsonar.projectName=example-project
-    -Dsonar.projectKey=example-project -Dsonar.projectVersion=$BUILD_NUMBER';
-  }
-  stage ('Integration TEST') {
-    sh 'mvn clean verify -Dsurefire.skip=true';
-    junit '**/target/failsafe-reports/TEST-*.xml'
-    archive 'target/*.jar'
-  }
-  stage ('Publish') {
-    def server = Artifactory.server 'Deafult Artifactory Server'
-    def uploadSpec = """{
-      "files": [
-        {
-          "pattern": "target/hello-0.0.1.war",
-          "target": "example-project/${BUILD_NUMBER}",
-          "props": "Integration-Tested=Yes;Performance-Tested=No"
+pipeline {
+    agent any
+
+    tools {
+        // Maven을 사용하는 경우, Jenkins에서 설정된 Maven 버전의 이름을 지정합니다.
+        maven "M3"
+    }
+
+    stages {
+        stage('Clone repository') {
+            steps {
+                git 'https://github.com/g-hyeong/hello-world-greeting.git'
+            }
         }
-      ]
-    }"""
-    server.upload(uploadSpec)
-  }
+
+        stage('Build') {
+            steps {
+                // Maven 프로젝트를 빌드하는 명령
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                // Maven 프로젝트의 테스트를 실행하는 명령
+                sh 'mvn test'
+            }
+        }
+    }
 }
